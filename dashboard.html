@@ -1,0 +1,151 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rent a Car Dashboard</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background-color: #eef2f7;
+            color: #1e293b;
+        }
+
+        header {
+            background-color: #1e40af;
+            color: white;
+            padding: 25px 35px;
+        }
+
+        header h1 {
+            margin: 0 0 8px;
+        }
+
+        header p {
+            margin: 0;
+            color: #dbeafe;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .section-title {
+            margin-bottom: 25px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns: repeat(
+                auto-fit,
+                minmax(230px, 1fr)
+            );
+            gap: 20px;
+        }
+
+        .card {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07);
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: #1e40af;
+        }
+
+        .card p {
+            color: #64748b;
+            line-height: 1.6;
+        }
+
+        .card a {
+            display: inline-block;
+            margin-top: 12px;
+            background-color: #2563eb;
+            color: white;
+            padding: 11px 18px;
+            border-radius: 6px;
+            text-decoration: none;
+        }
+
+        .card a:hover {
+            background-color: #1d4ed8;
+        }
+
+        .back-link {
+            display: inline-block;
+            margin-top: 30px;
+            color: #1e40af;
+            text-decoration: none;
+        }
+
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Rent a Car Dashboard</h1>
+        <p>Welcome to the Rent a Car Management System.</p>
+    </header>
+
+    <main class="container">
+
+        <h2 class="section-title">Management Menu</h2>
+
+        <div class="cards">
+
+            <div class="card">
+                <h3>Cars</h3>
+                <p>
+                    View and manage vehicles,
+                    including car information
+                    and availability status.
+                </p>
+                <a href="cars.html">Manage Cars</a>
+            </div>
+
+            <div class="card">
+                <h3>Customers</h3>
+                <p>
+                    View customer information,
+                    add new customers and
+                    update existing records.
+                </p>
+                <a href="customers.html">Manage Customers</a>
+            </div>
+
+            <div class="card">
+                <h3>Rentals</h3>
+                <p>
+                    Manage rental records,
+                    rental dates and
+                    vehicle assignments.
+                </p>
+                <a href="rentals.html">Manage Rentals</a>
+            </div>
+
+        </div>
+
+        <a class="back-link" href="index.html">
+            Back to Login
+        </a>
+
+    </main>
+
+</body>
+</html>
