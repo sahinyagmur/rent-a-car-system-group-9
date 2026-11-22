@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Payment Management</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #eef2f7; color: #1e293b; margin: 0; padding: 30px; }
+.container { max-width: 1100px; margin: auto; }
+h1, .card h2 { color: #1e40af; }
+.card { background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); }
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+th { background: #f1f5f9; }
+input, select { padding: 10px; margin: 5px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; font: inherit; }
+button { padding: 10px 15px; border: none; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; }
+button:hover { filter: brightness(.93); }
+.edit { background: #64748b; }
+.delete { background: #dc2626; }
+.back-link { display: inline-block; margin-top: 10px; color: #1e40af; }
+.actions { display: flex; gap: 8px; }
+.note { color: #64748b; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Payment Management</h1>
+<p>Manage payments associated with rental records.</p>
+<div class="card"><h2>Payment List</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Payment ID</th><th>Rental ID</th><th>Amount (TL)</th><th>Payment Method</th><th>Payment Status</th><th>Actions</th></tr></thead>
+<tbody id="paymentTable"></tbody>
+</table></div>
+</div>
+<div class="card"><h2 id="formTitle">Add New Payment</h2>
+<form id="paymentForm">
+<input id="rentalId" type="number" placeholder="Rental ID" min="1" step="1" required>
+<input id="amount" type="number" placeholder="Amount (TL)" min="0" step="0.01" required>
+<select id="method" aria-label="Payment method"><option value="Cash">Cash</option><option value="Card">Card</option></select>
+<select id="status" aria-label="Payment status"><option value="Pending">Pending</option><option value="Paid">Paid</option></select>
+<button type="submit" id="saveBtn">Add Payment</button>
+</form>
+<p class="note">Demo only: payment data is not saved in PostgreSQL yet. Rental IDs are not validated until backend integration.</p>
+</div>
+<a class="back-link" href="dashboard.html">Back to Dashboard</a>
+</div>
+<script>
+// Temporary browser-only demo data, to be replaced by real Flask endpoints.
+let payments = [{ id: 1, rentalId: 1, amount: 2500, method: "Card", status: "Paid" }];
+let nextId = 2;
+let editingId = null;
+const byId = id => document.getElementById(id);
+function renderPayments() {
+  const table = byId("paymentTable");
+  table.replaceChildren();
+  payments.forEach(payment => {
+    const row = document.createElement("tr");
+    [payment.id, payment.rentalId, Number(payment.amount).toFixed(2), payment.method, payment.status].forEach(value => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.appendChild(cell);
+    });
+    const actions = document.createElement("td");
+    actions.className = "actions";
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = "Edit";
+    editBtn.className = "edit";
+    editBtn.addEventListener("click", () => {
+      editingId = payment.id;
+      byId("rentalId").value = payment.rentalId;
+      byId("amount").value = payment.amount;
+      byId("method").value = payment.method;
+      byId("status").value = payment.status;
+      byId("formTitle").textContent = "Edit Payment";
+      byId("saveBtn").textContent = "Save Changes";
+    });
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.className = "delete";
+    deleteBtn.addEventListener("click", () => {
+      if (!confirm("Delete this payment?")) return;
+      payments = payments.filter(p => p.id !== payment.id);
+      if (editingId === payment.id) resetForm();
+      renderPayments();
+    });
+    actions.append(editBtn, deleteBtn);
+    row.appendChild(actions);
+    table.appendChild(row);
+  });
+}
+function resetForm() {
+  byId("paymentForm").reset();
+  byId("formTitle").textContent = "Add New Payment";
+  byId("saveBtn").textContent = "Add Payment";
+  editingId = null;
+}
+byId("paymentForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const rentalId = Number(byId("rentalId").value);
+  const amount = Number(byId("amount").value);
+  const method = byId("method").value;
+  const status = byId("status").value;
+  if (!Number.isInteger(rentalId) || rentalId < 1 || !Number.isFinite(amount) || amount < 0) {
+    alert("Please enter a valid Rental ID and payment amount."); return;
+  }
+  const values = { rentalId, amount, method, status };
+  if (editingId !== null) {
+    const payment = payments.find(p => p.id === editingId);
+    if (payment) Object.assign(payment, values);
+  } else {
+    payments.push({ id: nextId++, ...values });
+  }
+  resetForm();
+  renderPayments();
+});
+renderPayments();
+</script>
+</body>
+</html>
