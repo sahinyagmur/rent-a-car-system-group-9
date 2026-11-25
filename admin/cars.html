@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Car Management</title>
+<style>
+* { box-sizing: border-box; }
+body { font-family: Arial, sans-serif; background: #eef2f7; color: #1e293b; margin: 0; padding: 30px; }
+.container { max-width: 1100px; margin: auto; }
+h1, .card h2 { color: #1e40af; }
+.card { background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); }
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+th { background: #f1f5f9; }
+input, select { padding: 10px; margin: 5px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; font: inherit; }
+button { padding: 10px 15px; border: none; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; }
+button:hover { filter: brightness(.93); }
+.edit { background: #64748b; }
+.delete { background: #dc2626; }
+.back-link { display: inline-block; margin-top: 10px; color: #1e40af; }
+.actions { display: flex; gap: 8px; }
+.note { color: #64748b; font-size: 13px; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>Car Management</h1>
+<p>Manage vehicles in the Rent a Car system.</p>
+<div class="card">
+<h2>Car List</h2>
+<div class="table-wrapper"><table>
+<thead><tr><th>Car ID</th><th>Brand</th><th>Model</th><th>License Plate</th><th>Year</th><th>Price per day (TL)</th><th>Status</th><th>Actions</th></tr></thead>
+<tbody id="carTable"></tbody>
+</table></div>
+</div>
+<div class="card">
+<h2 id="formTitle">Add New Car</h2>
+<form id="carForm">
+<input type="text" id="brand" placeholder="Brand" required>
+<input type="text" id="model" placeholder="Model" required>
+<input type="text" id="licensePlate" placeholder="License Plate" required>
+<input type="number" id="year" placeholder="Year" min="1886" max="2100" step="1" required>
+<input type="number" id="pricePerDay" placeholder="Price per day (TL)" min="0" step="0.01" required>
+<select id="status" aria-label="Car status"><option value="Available">Available</option><option value="Rented">Rented</option><option value="Maintenance">Maintenance</option></select>
+<button type="submit" id="saveBtn">Add Car</button>
+</form>
+<p class="note">Demo only: data is stored in this browser page until the Flask API is connected.</p>
+</div>
+<a class="back-link" href="dashboard.html">Back to Dashboard</a>
+</div>
+<script>
+// Temporary browser-only data. Flask API integration will replace this array.
+let cars = [{ id: 1, brand: "Mercedes-Benz", model: "C200", licensePlate: "06 MRC 202", year: 2023, pricePerDay: 2500, status: "Available" }];
+let nextId = 2;
+let editingId = null;
+const byId = id => document.getElementById(id);
+function renderCars() {
+  const table = byId("carTable");
+  table.replaceChildren();
+  cars.forEach(car => {
+    const row = document.createElement("tr");
+    [car.id, car.brand, car.model, car.licensePlate, car.year, Number(car.pricePerDay).toFixed(2), car.status].forEach(value => {
+      const cell = document.createElement("td");
+      cell.textContent = value;
+      row.appendChild(cell);
+    });
+    const actions = document.createElement("td");
+    actions.className = "actions";
+    const editBtn = document.createElement("button");
+    editBtn.type = "button";
+    editBtn.textContent = "Edit";
+    editBtn.className = "edit";
+    editBtn.addEventListener("click", () => {
+      editingId = car.id;
+      byId("brand").value = car.brand;
+      byId("model").value = car.model;
+      byId("licensePlate").value = car.licensePlate;
+      byId("year").value = car.year;
+      byId("pricePerDay").value = car.pricePerDay;
+      byId("status").value = car.status;
+      byId("formTitle").textContent = "Edit Car";
+      byId("saveBtn").textContent = "Save Changes";
+    });
+    const deleteBtn = document.createElement("button");
+    deleteBtn.type = "button";
+    deleteBtn.textContent = "Delete";
+    deleteBtn.className = "delete";
+    deleteBtn.addEventListener("click", () => {
+      if (!confirm("Delete this car?")) return;
+      cars = cars.filter(c => c.id !== car.id);
+      if (editingId === car.id) resetForm();
+      renderCars();
+    });
+    actions.append(editBtn, deleteBtn);
+    row.appendChild(actions);
+    table.appendChild(row);
+  });
+}
+function resetForm() {
+  byId("carForm").reset();
+  byId("formTitle").textContent = "Add New Car";
+  byId("saveBtn").textContent = "Add Car";
+  editingId = null;
+}
+byId("carForm").addEventListener("submit", event => {
+  event.preventDefault();
+  const brand = byId("brand").value.trim();
+  const model = byId("model").value.trim();
+  const licensePlate = byId("licensePlate").value.trim();
+  const year = Number(byId("year").value);
+  const pricePerDay = Number(byId("pricePerDay").value);
+  const status = byId("status").value;
+  if (!brand || !model || !licensePlate || !Number.isInteger(year) || year < 1886 || year > 2100 || !Number.isFinite(pricePerDay) || pricePerDay < 0) {
+    alert("Please enter valid car details."); return;
+  }
+  const values = { brand, model, licensePlate, year, pricePerDay, status };
+  if (editingId !== null) {
+    const car = cars.find(c => c.id === editingId);
+    if (car) Object.assign(car, values);
+  } else {
+    cars.push({ id: nextId++, ...values });
+  }
+  resetForm();
+  renderCars();
+});
+renderCars();
+</script>
+</body>
+</html>

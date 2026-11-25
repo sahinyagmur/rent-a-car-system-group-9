@@ -1,0 +1,215 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Customer Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #eef2f7;
+            margin: 0;
+            padding: 30px;
+            color: #1e293b;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.07);
+        }
+
+        h1 { color: #1e40af; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+
+        th { background: #f1f5f9; }
+
+        input {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 6px;
+            background: #2563eb;
+            color: white;
+            cursor: pointer;
+        }
+
+        .delete { background: #dc2626; }
+        .edit { background: #64748b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Customer Management</h1>
+        <p>Manage customers in the Rent a Car system.</p>
+
+        <div class="card">
+            <h2>Customer List</h2>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Full Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="customerTable"></tbody>
+            </table>
+        </div>
+
+        <div class="card">
+            <h2 id="formTitle">Add New Customer</h2>
+
+            <form id="customerForm">
+                <input id="fullName" type="text"
+                    placeholder="Full Name" required>
+
+                <input id="email" type="email"
+                    placeholder="Email" required>
+
+                <input id="phone" type="tel"
+                    placeholder="Phone" required>
+
+                <button type="submit" id="saveBtn">
+                    Add Customer
+                </button>
+            </form>
+        </div>
+
+        <a href="dashboard.html">Back to Dashboard</a>
+    </div>
+
+    <script>
+        // Temporary browser-only data
+        let customers = [
+            {
+                id: 1,
+                name: "Sample Customer",
+                email: "sample@example.com",
+                phone: "05000000000"
+            }
+        ];
+
+        let nextId = 2;
+        let editingId = null;
+
+        function renderCustomers() {
+            const table = document.getElementById("customerTable");
+            table.innerHTML = "";
+
+            customers.forEach(customer => {
+                const row = document.createElement("tr");
+
+                [customer.id, customer.name,
+                 customer.email, customer.phone].forEach(value => {
+                    const cell = document.createElement("td");
+                    cell.textContent = value;
+                    row.appendChild(cell);
+                });
+
+                const actions = document.createElement("td");
+
+                const editBtn = document.createElement("button");
+                editBtn.textContent = "Edit";
+                editBtn.className = "edit";
+                editBtn.addEventListener("click", () => {
+                    editingId = customer.id;
+                    document.getElementById("fullName").value = customer.name;
+                    document.getElementById("email").value = customer.email;
+                    document.getElementById("phone").value = customer.phone;
+                    document.getElementById("formTitle").textContent =
+                        "Edit Customer";
+                    document.getElementById("saveBtn").textContent =
+                        "Save Changes";
+                });
+
+                const deleteBtn = document.createElement("button");
+                deleteBtn.textContent = "Delete";
+                deleteBtn.className = "delete";
+                deleteBtn.addEventListener("click", () => {
+                    if (!confirm("Delete this customer?")) return;
+
+                    customers = customers.filter(c => c.id !== customer.id);
+                    if (editingId === customer.id) resetForm();
+                    renderCustomers();
+                });
+
+                actions.appendChild(editBtn);
+                actions.appendChild(document.createTextNode(" "));
+                actions.appendChild(deleteBtn);
+                row.appendChild(actions);
+                table.appendChild(row);
+            });
+        }
+
+        function resetForm() {
+            document.getElementById("customerForm").reset();
+            document.getElementById("formTitle").textContent =
+                "Add New Customer";
+            document.getElementById("saveBtn").textContent =
+                "Add Customer";
+            editingId = null;
+        }
+
+        document.getElementById("customerForm")
+            .addEventListener("submit", function(event) {
+                event.preventDefault();
+
+                const name = document.getElementById("fullName").value.trim();
+                const email = document.getElementById("email").value.trim();
+                const phone = document.getElementById("phone").value.trim();
+
+                if (!name || !email || !phone) return;
+
+                if (editingId !== null) {
+                    const customer = customers.find(c => c.id === editingId);
+                    if (customer) {
+                        customer.name = name;
+                        customer.email = email;
+                        customer.phone = phone;
+                    }
+                } else {
+                    customers.push({
+                        id: nextId++,
+                        name: name,
+                        email: email,
+                        phone: phone
+                    });
+                }
+
+                resetForm();
+                renderCustomers();
+            });
+
+        renderCustomers();
+    </script>
+</body>
+</html>

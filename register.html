@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create account — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="register" data-layout="bare">
+<main class="auth-wrap">
+  <section class="auth-side">
+    <div>
+      <span class="eyebrow">Create account</span>
+      <h2>One account for every trip.</h2>
+      <p>We need your driver license number once — after that, booking a car takes a few clicks.</p>
+    </div>
+    <div id="sideArt" style="max-width:440px"></div>
+  </section>
+
+  <section class="auth-main">
+    <div class="auth-card">
+      <h1>Sign up</h1>
+      <p class="muted">Already have an account? <a href="login.html" id="toLogin">Log in</a></p>
+
+      <div id="error" class="form-error hidden" role="alert"></div>
+      <form id="registerForm" novalidate>
+        <div class="field">
+          <label for="name">Full name</label>
+          <input class="input" id="name" autocomplete="name" maxlength="150" required>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="email">E-mail</label>
+            <input class="input" id="email" type="email" autocomplete="email" maxlength="255" required>
+          </div>
+          <div class="field">
+            <label for="phone">Phone</label>
+            <input class="input" id="phone" type="tel" autocomplete="tel" placeholder="05xx xxx xx xx" maxlength="30" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="license">Driver license number</label>
+          <input class="input" id="license" maxlength="30" required>
+          <span class="hint">Required to rent a car. Each license can be used for one account.</span>
+        </div>
+        <div class="field">
+          <label for="username">Username</label>
+          <input class="input" id="username" autocomplete="username" maxlength="50" required>
+        </div>
+        <div class="form-row">
+          <div class="field">
+            <label for="password">Password</label>
+            <input class="input" id="password" type="password" autocomplete="new-password" minlength="8" required>
+            <span class="hint">At least 8 characters.</span>
+          </div>
+          <div class="field">
+            <label for="password2">Repeat password</label>
+            <input class="input" id="password2" type="password" autocomplete="new-password" required>
+          </div>
+        </div>
+        <button class="btn btn-accent btn-lg btn-block" id="submitBtn" type="submit">Create account</button>
+      </form>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  $("sideArt").innerHTML = UI.carArt({ brand: "Sign", model: "Up" });
+
+  const rawNext = UI.qs("next");
+  const next = rawNext && !/^([a-z]+:)?\/\//i.test(rawNext) ? rawNext : null;
+  if (next) $("toLogin").href = "login.html?next=" + encodeURIComponent(next);
+
+  function fail(msg, field) {
+    $("error").textContent = msg;
+    $("error").classList.remove("hidden");
+    document.querySelectorAll(".input").forEach(i => i.removeAttribute("aria-invalid"));
+    if (field) { $(field).setAttribute("aria-invalid", "true"); $(field).focus(); }
+  }
+
+  $("registerForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    $("error").classList.add("hidden");
+    const data = {
+      name: $("name").value.trim(),
+      email: $("email").value.trim().toLowerCase(),
+      phone: $("phone").value.trim(),
+      driver_license_no: $("license").value.trim().toUpperCase(),
+      username: $("username").value.trim(),
+      password: $("password").value
+    };
+    if (!data.name) return fail("Enter your full name.", "name");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return fail("Enter a valid e-mail address.", "email");
+    if (!/^[0-9 +()-]{10,30}$/.test(data.phone)) return fail("Enter a valid phone number.", "phone");
+    if (data.driver_license_no.length < 5) return fail("Enter your driver license number.", "license");
+    if (!/^[a-zA-Z0-9_.]{3,50}$/.test(data.username)) return fail("Username: 3–50 letters, digits, dot or underscore.", "username");
+    if (data.password.length < 8) return fail("Password must be at least 8 characters.", "password");
+    if (data.password !== $("password2").value) return fail("Passwords don't match.", "password2");
+
+    $("submitBtn").disabled = true;
+    try {
+      await Auth.register(data);
+      location.href = next || "cars.html";
+    } catch (e) {
+      fail(e.message);
+      $("submitBtn").disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

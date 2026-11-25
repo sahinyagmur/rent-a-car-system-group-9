@@ -1,128 +1,158 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rent a Car Management System</title>
-
-    <style>
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            min-height: 100vh;
-            background-color: #eef2f7;
-            font-family: Arial, sans-serif;
-            color: #1e293b;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-        }
-
-        h1 {
-            color: #1e40af;
-            text-align: center;
-            margin-bottom: 30px;
-        }
-
-        .login-box {
-            background-color: white;
-            padding: 35px;
-            border-radius: 12px;
-            width: 100%;
-            max-width: 380px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-
-        h2 {
-            text-align: center;
-            margin-top: 0;
-        }
-
-        label {
-            display: block;
-            margin-bottom: 8px;
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            margin-bottom: 20px;
-            border: 1px solid #cbd5e1;
-            border-radius: 6px;
-        }
-
-        button, .demo-link {
-            display: block;
-            width: 100%;
-            padding: 12px;
-            border-radius: 6px;
-            text-align: center;
-            font-size: 15px;
-        }
-
-        button {
-            background-color: #2563eb;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-
-        .demo-link {
-            margin-top: 15px;
-            background-color: #e2e8f0;
-            color: #1e40af;
-            text-decoration: none;
-        }
-
-        .note {
-            color: #64748b;
-            font-size: 12px;
-            text-align: center;
-            line-height: 1.5;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>G9 Rent a Car — Rent a car in minutes</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
-
-<body>
-    <h1>Rent a Car Management System</h1>
-
-    <div class="login-box">
-        <h2>Login</h2>
-
-        <form id="loginForm">
-            <label for="username">Username</label>
-            <input id="username" type="text"
-                   placeholder="Enter username" required>
-
-            <label for="password">Password</label>
-            <input id="password" type="password"
-                   placeholder="Enter password" required>
-
-            <button type="submit">Login</button>
-        </form>
-
-        <p class="note">
-            Login authentication is not connected yet.
-        </p>
-
-        <a class="demo-link" href="dashboard.html">
-            View Demo Dashboard
-        </a>
+<body data-page="home">
+<main>
+  <section class="hero">
+    <div class="container">
+      <div>
+        <span class="eyebrow">Ankara · Daily rentals</span>
+        <h1>Your next drive,<br><em>booked in minutes.</em></h1>
+        <p class="lead">Choose a car, pick your dates and see the full price before you book. No hidden fees, no paperwork at the counter.</p>
+        <div class="hero-stats">
+          <div><b id="statCars">—</b><span>cars in the fleet</span></div>
+          <div><b id="statFrom">—</b><span>lowest daily price</span></div>
+          <div><b>24/7</b><span>online booking</span></div>
+        </div>
+      </div>
+      <div class="hero-art" id="heroArt"></div>
     </div>
+  </section>
 
-    <script>
-        document.getElementById("loginForm")
-            .addEventListener("submit", function(event) {
-                event.preventDefault();
+  <div class="container">
+    <form class="search-bar" id="searchForm" action="cars.html">
+      <div class="field">
+        <label for="start">Pick-up date</label>
+        <input class="input" type="date" id="start" name="start" required>
+      </div>
+      <div class="field">
+        <label for="end">Return date</label>
+        <input class="input" type="date" id="end" name="end" required>
+      </div>
+      <div class="field">
+        <label for="brand">Brand</label>
+        <select class="select" id="brand" name="brand">
+          <option value="">Any brand</option>
+        </select>
+      </div>
+      <button class="btn btn-accent btn-lg" type="submit">Find available cars</button>
+    </form>
+  </div>
 
-                alert("Login will be enabled after backend integration.");
-            });
-    </script>
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <div>
+          <span class="eyebrow">Popular picks</span>
+          <h2>Ready to drive today</h2>
+        </div>
+        <a class="btn btn-ghost" href="cars.html">See all cars →</a>
+      </div>
+      <div class="car-grid" id="featured"></div>
+    </div>
+  </section>
+
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="features">
+        <div class="card feature">
+          <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <h3>Price locked at booking</h3>
+          <p>The total is calculated when you book and stored with your rental, so it never changes later.</p>
+        </div>
+        <div class="card feature">
+          <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+          <h3>Real availability</h3>
+          <p>Cars already booked for your dates or in maintenance are filtered out automatically.</p>
+        </div>
+        <div class="card feature">
+          <div class="ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <h3>Your rentals in one place</h3>
+          <p>Track pending and active rentals, payments and remaining balance from your account.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="how" style="padding-top:0">
+    <div class="container">
+      <span class="eyebrow">How it works</span>
+      <h2 style="margin-bottom:32px">Three steps to the road</h2>
+      <div class="steps">
+        <div class="step"><h3>Pick your dates</h3><p>Enter pick-up and return dates to see only the cars that are free.</p></div>
+        <div class="step"><h3>Book with your license</h3><p>Create an account with your driver license number and confirm the booking.</p></div>
+        <div class="step"><h3>Pick up and drive</h3><p>Pay online or at the counter. Your rental becomes active on pick-up day.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="container">
+    <div class="cta-band">
+      <div>
+        <h2>New here?</h2>
+        <p>Create a free account and book your first car in under two minutes.</p>
+      </div>
+      <a class="btn btn-lg" href="register.html">Create account</a>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  const start = document.getElementById("start");
+  const end = document.getElementById("end");
+  const t = API.today();
+  start.min = t; end.min = t;
+  start.value = UI.addDays(t, 1);
+  end.value = UI.addDays(t, 3);
+  start.addEventListener("change", () => {
+    end.min = start.value;
+    if (end.value < start.value) end.value = start.value;
+  });
+
+  document.getElementById("heroArt").innerHTML =
+    UI.carArt({ brand: "Hero", model: "Coupe" });
+
+  try {
+    const cars = await API.list("cars");
+    const brands = [...new Set(cars.map(c => c.brand))].sort();
+    document.getElementById("brand").insertAdjacentHTML("beforeend",
+      brands.map(b => `<option>${UI.esc(b)}</option>`).join(""));
+
+    document.getElementById("statCars").textContent = cars.length;
+    const prices = cars.map(c => Number(c.price_per_day));
+    document.getElementById("statFrom").textContent = prices.length ? UI.money(Math.min(...prices)) : "—";
+
+    const featured = cars.filter(c => c.status === "Available")
+      .sort((a, b) => b.year - a.year).slice(0, 6);
+    document.getElementById("featured").innerHTML = featured.map(car => `
+      <a class="car-card" href="car-detail.html?id=${car.id}">
+        <div class="art">${UI.carArt(car)}</div>
+        <div class="body">
+          <div class="title">
+            <div><h3>${UI.esc(car.brand)} ${UI.esc(car.model)}</h3><div class="sub">${car.year}</div></div>
+            ${UI.badge(car.status)}
+          </div>
+          <div class="foot">
+            <div class="price"><b>${UI.money(car.price_per_day)}</b> <span>/ day</span></div>
+            <span class="btn btn-sm">View</span>
+          </div>
+        </div>
+      </a>`).join("");
+  } catch (e) {
+    document.getElementById("featured").innerHTML = `<div class="empty"><h3>Could not load cars</h3><p>${UI.esc(e.message)}</p></div>`;
+  }
+})();
+</script>
 </body>
 </html>

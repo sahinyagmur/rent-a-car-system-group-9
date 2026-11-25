@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Car details — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="cars">
+<main class="container">
+  <div class="page-head" style="padding-bottom:18px">
+    <a class="small muted" href="cars.html" id="backLink">← Back to all cars</a>
+  </div>
+
+  <div id="content"><p class="muted">Loading…</p></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  const box = document.getElementById("content");
+  const id = Number(UI.qs("id"));
+  const back = new URLSearchParams(location.search);
+  back.delete("id");
+  if ([...back].length) document.getElementById("backLink").href = "cars.html?" + back;
+
+  let car, booked;
+  try {
+    car = await API.get("cars", id);
+    booked = await API.bookedRanges(id);
+  } catch (e) {
+    box.innerHTML = `<div class="empty"><h3>Car not found</h3><p>It may have been removed.</p><a class="btn" href="cars.html">Browse cars</a></div>`;
+    return;
+  }
+  document.title = `${car.brand} ${car.model} — G9 Rent a Car`;
+  const maintenance = car.status === "Maintenance";
+  const upcoming = booked.filter(r => r.end_date >= API.today())
+    .sort((a, b) => a.start_date.localeCompare(b.start_date));
+
+  box.innerHTML = `
+    <div class="detail">
+      <div>
+        <div class="detail-art">${UI.carArt(car)}</div>
+        <div style="margin-top:28px">
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+            <h1 style="margin:0">${UI.esc(car.brand)} ${UI.esc(car.model)}</h1>
+            ${UI.badge(car.status)}
+          </div>
+          <div class="spec-list">
+            <div class="spec"><span>Brand</span><b>${UI.esc(car.brand)}</b></div>
+            <div class="spec"><span>Model</span><b>${UI.esc(car.model)}</b></div>
+            <div class="spec"><span>Year</span><b>${car.year}</b></div>
+            <div class="spec"><span>Plate</span><b>${UI.esc(car.license_plate)}</b></div>
+          </div>
+          <h3>Already booked</h3>
+          ${upcoming.length
+            ? `<ul class="muted" style="padding-left:18px">${upcoming.map(r =>
+                `<li>${UI.date(r.start_date)} – ${UI.date(r.end_date)}</li>`).join("")}</ul>`
+            : `<p class="muted">No upcoming bookings — this car is free on any date.</p>`}
+        </div>
+      </div>
+
+      <aside class="card card-pad booking-box">
+        <div class="price" style="margin-bottom:18px"><b>${UI.money(car.price_per_day)}</b> <span>/ day</span></div>
+        ${maintenance ? `<div class="form-error">This car is in maintenance and can't be booked right now.</div>` : ""}
+        <form id="bookForm">
+          <div class="form-row">
+            <div class="field"><label for="start">Pick-up</label><input class="input" type="date" id="start" required></div>
+            <div class="field"><label for="end">Return</label><input class="input" type="date" id="end" required></div>
+          </div>
+          <div id="clash" class="form-error hidden"></div>
+          <div class="summary-row"><span id="calcLabel">—</span><span id="calcValue">—</span></div>
+          <div class="summary-row total"><span>Total</span><span id="total">—</span></div>
+          <button class="btn btn-accent btn-lg btn-block" id="bookBtn" type="submit" style="margin-top:14px" ${maintenance ? "disabled" : ""}>Continue to booking</button>
+          <p class="small muted center" style="margin:12px 0 0">You won't be charged yet.</p>
+        </form>
+      </aside>
+    </div>`;
+
+  const $ = s => document.getElementById(s);
+  const t = API.today();
+  $("start").min = t;
+  $("start").value = UI.qs("start") || UI.addDays(t, 1);
+  $("end").value = UI.qs("end") || UI.addDays($("start").value, 2);
+
+  function update() {
+    $("end").min = $("start").value || t;
+    const s = $("start").value, e = $("end").value;
+    const days = s && e && e >= s ? API.dayCount(s, e) : 0;
+    const clash = days && upcoming.find(r => s <= r.end_date && r.start_date <= e);
+    $("calcLabel").textContent = days ? `${UI.money(car.price_per_day)} × ${days} day${days > 1 ? "s" : ""}` : "Select valid dates";
+    $("calcValue").textContent = days ? UI.money(days * car.price_per_day) : "—";
+    $("total").textContent = days ? UI.money(days * car.price_per_day) : "—";
+    $("clash").classList.toggle("hidden", !clash);
+    if (clash) $("clash").textContent = `Booked ${UI.date(clash.start_date)} – ${UI.date(clash.end_date)}. Choose other dates.`;
+    $("bookBtn").disabled = maintenance || !days || !!clash;
+  }
+  $("start").addEventListener("change", () => {
+    if ($("end").value < $("start").value) $("end").value = $("start").value;
+    update();
+  });
+  $("end").addEventListener("change", update);
+  update();
+
+  $("bookForm").addEventListener("submit", ev => {
+    ev.preventDefault();
+    const target = `booking.html?car=${car.id}&start=${$("start").value}&end=${$("end").value}`;
+    const user = Auth.user();
+    if (!user) { location.href = `login.html?next=${encodeURIComponent(target)}`; return; }
+    if (user.role !== "customer") { UI.toast("Admins can't book cars. Log in as a customer.", "bad"); return; }
+    location.href = target;
+  });
+})();
+</script>
+</body>
+</html>

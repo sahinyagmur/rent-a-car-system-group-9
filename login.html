@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Log in — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="login" data-layout="bare">
+<main class="auth-wrap">
+  <section class="auth-side">
+    <div>
+      <span class="eyebrow">Welcome back</span>
+      <h2>Your rentals, payments and bookings — all in one account.</h2>
+      <p>Log in to book a car or follow up on an existing rental.</p>
+    </div>
+    <div id="sideArt" style="max-width:440px"></div>
+  </section>
+
+  <section class="auth-main">
+    <div class="auth-card">
+      <h1>Log in</h1>
+      <p class="muted">No account yet? <a href="register.html" id="toRegister">Create one</a></p>
+
+      <div id="error" class="form-error hidden" role="alert"></div>
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="username">Username</label>
+          <input class="input" id="username" autocomplete="username" required>
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input class="input" id="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn btn-accent btn-lg btn-block" id="submitBtn" type="submit">Log in</button>
+      </form>
+
+      <div class="demo-accounts">
+        <strong>Test accounts</strong><br>
+        Admin: <code>admin</code> / <code>Admin123!</code><br>
+        Customer: <code>demo1</code> / <code>Customer123!</code>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  $("sideArt").innerHTML = UI.carArt({ brand: "Login", model: "Tourer" });
+
+  // Only allow same-site relative redirects (no "//evil.com" or "https://...")
+  const rawNext = UI.qs("next");
+  const next = rawNext && !/^([a-z]+:)?\/\//i.test(rawNext) ? rawNext : null;
+  if (next) $("toRegister").href = "register.html?next=" + encodeURIComponent(next);
+
+  const existing = Auth.user();
+  if (existing) location.replace(next || Auth.homeFor(existing));
+
+  $("loginForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    const username = $("username").value.trim();
+    const password = $("password").value;
+    $("error").classList.add("hidden");
+    if (!username || !password) {
+      $("error").textContent = "Enter your username and password.";
+      $("error").classList.remove("hidden");
+      return;
+    }
+    $("submitBtn").disabled = true;
+    try {
+      const user = await Auth.login(username, password);
+      location.href = next || Auth.homeFor(user);
+    } catch (e) {
+      $("error").textContent = e.message;
+      $("error").classList.remove("hidden");
+      $("submitBtn").disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

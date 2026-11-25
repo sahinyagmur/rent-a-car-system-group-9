@@ -1,131 +1,173 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Car Management</title>
-<style>
-* { box-sizing: border-box; }
-body { font-family: Arial, sans-serif; background: #eef2f7; color: #1e293b; margin: 0; padding: 30px; }
-.container { max-width: 1100px; margin: auto; }
-h1, .card h2 { color: #1e40af; }
-.card { background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.07); }
-.table-wrapper { overflow-x: auto; }
-table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-th, td { padding: 12px; border-bottom: 1px solid #e2e8f0; text-align: left; }
-th { background: #f1f5f9; }
-input, select { padding: 10px; margin: 5px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; font: inherit; }
-button { padding: 10px 15px; border: none; border-radius: 6px; background: #2563eb; color: white; cursor: pointer; }
-button:hover { filter: brightness(.93); }
-.edit { background: #64748b; }
-.delete { background: #dc2626; }
-.back-link { display: inline-block; margin-top: 10px; color: #1e40af; }
-.actions { display: flex; gap: 8px; }
-.note { color: #64748b; font-size: 13px; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cars — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-<div class="container">
-<h1>Car Management</h1>
-<p>Manage vehicles in the Rent a Car system.</p>
-<div class="card">
-<h2>Car List</h2>
-<div class="table-wrapper"><table>
-<thead><tr><th>Car ID</th><th>Brand</th><th>Model</th><th>License Plate</th><th>Year</th><th>Price per day (TL)</th><th>Status</th><th>Actions</th></tr></thead>
-<tbody id="carTable"></tbody>
-</table></div>
-</div>
-<div class="card">
-<h2 id="formTitle">Add New Car</h2>
-<form id="carForm">
-<input type="text" id="brand" placeholder="Brand" required>
-<input type="text" id="model" placeholder="Model" required>
-<input type="text" id="licensePlate" placeholder="License Plate" required>
-<input type="number" id="year" placeholder="Year" min="1886" max="2100" step="1" required>
-<input type="number" id="pricePerDay" placeholder="Price per day (TL)" min="0" step="0.01" required>
-<select id="status" aria-label="Car status"><option value="Available">Available</option><option value="Rented">Rented</option><option value="Maintenance">Maintenance</option></select>
-<button type="submit" id="saveBtn">Add Car</button>
-</form>
-<p class="note">Demo only: data is stored in this browser page until the Flask API is connected.</p>
-</div>
-<a class="back-link" href="dashboard.html">Back to Dashboard</a>
-</div>
+<body data-page="cars">
+<main class="container">
+  <div class="page-head">
+    <span class="eyebrow">Our fleet</span>
+    <h1>Find your car</h1>
+    <p class="lead" id="headLead">Enter your dates to see which cars are free.</p>
+  </div>
+
+  <div class="catalog">
+    <aside class="card card-pad filters">
+      <form id="filterForm">
+        <h3>Dates</h3>
+        <div class="field">
+          <label for="start">Pick-up</label>
+          <input class="input" type="date" id="start" name="start">
+        </div>
+        <div class="field">
+          <label for="end">Return</label>
+          <input class="input" type="date" id="end" name="end">
+        </div>
+
+        <h3 style="margin-top:8px">Filters</h3>
+        <div class="field">
+          <label for="brand">Brand</label>
+          <select class="select" id="brand" name="brand"><option value="">Any brand</option></select>
+        </div>
+        <div class="field">
+          <label for="maxPrice">Max price per day: <span id="maxPriceOut"></span></label>
+          <input type="range" id="maxPrice" name="max" min="0" max="10000" step="100" style="accent-color:var(--accent)">
+        </div>
+        <div class="field">
+          <label style="display:flex;gap:8px;align-items:center;font-weight:600">
+            <input type="checkbox" id="onlyFree" name="free" value="1" style="accent-color:var(--accent)"> Only show available
+          </label>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-accent" type="submit" style="flex:1">Apply</button>
+          <a class="btn btn-ghost" href="cars.html">Clear</a>
+        </div>
+      </form>
+    </aside>
+
+    <section>
+      <div class="results-bar">
+        <strong id="count">Loading…</strong>
+        <label class="small muted" style="display:flex;align-items:center;gap:8px">Sort
+          <select class="select" id="sort">
+            <option value="price-asc">Price: low to high</option>
+            <option value="price-desc">Price: high to low</option>
+            <option value="year-desc">Newest first</option>
+            <option value="brand">Brand A–Z</option>
+          </select>
+        </label>
+      </div>
+      <div class="car-grid" id="grid"></div>
+    </section>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
 <script>
-// Temporary browser-only data. Flask API integration will replace this array.
-let cars = [{ id: 1, brand: "Mercedes-Benz", model: "C200", licensePlate: "06 MRC 202", year: 2023, pricePerDay: 2500, status: "Available" }];
-let nextId = 2;
-let editingId = null;
-const byId = id => document.getElementById(id);
-function renderCars() {
-  const table = byId("carTable");
-  table.replaceChildren();
-  cars.forEach(car => {
-    const row = document.createElement("tr");
-    [car.id, car.brand, car.model, car.licensePlate, car.year, Number(car.pricePerDay).toFixed(2), car.status].forEach(value => {
-      const cell = document.createElement("td");
-      cell.textContent = value;
-      row.appendChild(cell);
-    });
-    const actions = document.createElement("td");
-    actions.className = "actions";
-    const editBtn = document.createElement("button");
-    editBtn.type = "button";
-    editBtn.textContent = "Edit";
-    editBtn.className = "edit";
-    editBtn.addEventListener("click", () => {
-      editingId = car.id;
-      byId("brand").value = car.brand;
-      byId("model").value = car.model;
-      byId("licensePlate").value = car.licensePlate;
-      byId("year").value = car.year;
-      byId("pricePerDay").value = car.pricePerDay;
-      byId("status").value = car.status;
-      byId("formTitle").textContent = "Edit Car";
-      byId("saveBtn").textContent = "Save Changes";
-    });
-    const deleteBtn = document.createElement("button");
-    deleteBtn.type = "button";
-    deleteBtn.textContent = "Delete";
-    deleteBtn.className = "delete";
-    deleteBtn.addEventListener("click", () => {
-      if (!confirm("Delete this car?")) return;
-      cars = cars.filter(c => c.id !== car.id);
-      if (editingId === car.id) resetForm();
-      renderCars();
-    });
-    actions.append(editBtn, deleteBtn);
-    row.appendChild(actions);
-    table.appendChild(row);
+(async function () {
+  const $ = id => document.getElementById(id);
+  const t = API.today();
+  const p = {
+    start: UI.qs("start") || "",
+    end: UI.qs("end") || "",
+    brand: UI.qs("brand") || "",
+    max: UI.qs("max") || "",
+    free: UI.qs("free") === "1"
+  };
+  $("start").min = t; $("end").min = p.start || t;
+  $("start").value = p.start; $("end").value = p.end;
+  $("onlyFree").checked = p.free;
+  $("start").addEventListener("change", () => {
+    $("end").min = $("start").value;
+    if ($("end").value && $("end").value < $("start").value) $("end").value = $("start").value;
   });
-}
-function resetForm() {
-  byId("carForm").reset();
-  byId("formTitle").textContent = "Add New Car";
-  byId("saveBtn").textContent = "Add Car";
-  editingId = null;
-}
-byId("carForm").addEventListener("submit", event => {
-  event.preventDefault();
-  const brand = byId("brand").value.trim();
-  const model = byId("model").value.trim();
-  const licensePlate = byId("licensePlate").value.trim();
-  const year = Number(byId("year").value);
-  const pricePerDay = Number(byId("pricePerDay").value);
-  const status = byId("status").value;
-  if (!brand || !model || !licensePlate || !Number.isInteger(year) || year < 1886 || year > 2100 || !Number.isFinite(pricePerDay) || pricePerDay < 0) {
-    alert("Please enter valid car details."); return;
+
+  const datesValid = p.start && p.end && p.end >= p.start;
+  let cars = [], freeIds = null;
+
+  try {
+    cars = await API.list("cars");
+    if (datesValid) freeIds = new Set((await API.availableCars(p.start, p.end)).map(c => c.id));
+  } catch (e) {
+    $("grid").innerHTML = `<div class="empty"><h3>Could not load cars</h3><p>${UI.esc(e.message)}</p></div>`;
+    $("count").textContent = "";
+    return;
   }
-  const values = { brand, model, licensePlate, year, pricePerDay, status };
-  if (editingId !== null) {
-    const car = cars.find(c => c.id === editingId);
-    if (car) Object.assign(car, values);
-  } else {
-    cars.push({ id: nextId++, ...values });
+
+  // Brand select + price slider bounds come from the data
+  const brands = [...new Set(cars.map(c => c.brand))].sort();
+  $("brand").insertAdjacentHTML("beforeend", brands.map(b => `<option>${UI.esc(b)}</option>`).join(""));
+  $("brand").value = p.brand;
+  const top = Math.ceil(Math.max(1000, ...cars.map(c => Number(c.price_per_day))) / 500) * 500;
+  $("maxPrice").max = top;
+  $("maxPrice").value = p.max || top;
+  const showMax = () => { $("maxPriceOut").textContent = UI.money($("maxPrice").value); };
+  $("maxPrice").addEventListener("input", showMax); showMax();
+
+  if (datesValid) {
+    const d = API.dayCount(p.start, p.end);
+    $("headLead").textContent = `${UI.date(p.start)} → ${UI.date(p.end)} · ${d} day${d > 1 ? "s" : ""}. Prices below show the total for your trip.`;
   }
-  resetForm();
-  renderCars();
-});
-renderCars();
+
+  const isFree = car => freeIds ? freeIds.has(car.id) : car.status !== "Maintenance";
+
+  function render() {
+    const max = Number($("maxPrice").value);
+    let list = cars.filter(c =>
+      (!p.brand || c.brand === p.brand) &&
+      Number(c.price_per_day) <= max &&
+      (!p.free || isFree(c)));
+
+    const sort = $("sort").value;
+    list.sort((a, b) =>
+      sort === "price-desc" ? b.price_per_day - a.price_per_day :
+      sort === "year-desc" ? b.year - a.year :
+      sort === "brand" ? (a.brand + a.model).localeCompare(b.brand + b.model) :
+      a.price_per_day - b.price_per_day);
+    // Available cars first
+    list.sort((a, b) => isFree(b) - isFree(a));
+
+    $("count").textContent = `${list.length} car${list.length === 1 ? "" : "s"}`;
+    if (!list.length) {
+      $("grid").innerHTML = `<div class="empty" style="grid-column:1/-1"><h3>No cars match</h3><p>Try other dates or remove a filter.</p></div>`;
+      return;
+    }
+    const days = datesValid ? API.dayCount(p.start, p.end) : 0;
+    const q = datesValid ? `&start=${p.start}&end=${p.end}` : "";
+    $("grid").innerHTML = list.map(car => {
+      const free = isFree(car);
+      const status = free ? (datesValid ? "Available" : car.status) : (car.status === "Maintenance" ? "Maintenance" : "Rented");
+      const label = free ? status : (status === "Rented" ? "Booked" : status);
+      return `
+      <a class="car-card${free ? "" : " unavailable"}" href="car-detail.html?id=${car.id}${q}">
+        <div class="art">${UI.carArt(car)}</div>
+        <div class="body">
+          <div class="title">
+            <div><h3>${UI.esc(car.brand)} ${UI.esc(car.model)}</h3><div class="sub">${car.year}</div></div>
+            ${UI.badge(status, label)}
+          </div>
+          <div class="foot">
+            <div class="price">
+              <b>${UI.money(days ? days * car.price_per_day : car.price_per_day)}</b>
+              <span>${days ? `total · ${UI.money(car.price_per_day)}/day` : "/ day"}</span>
+            </div>
+            <span class="btn btn-sm${free ? "" : " btn-ghost"}">${free ? "Book" : "Details"}</span>
+          </div>
+        </div>
+      </a>`;
+    }).join("");
+  }
+
+  $("sort").addEventListener("change", render);
+  render();
+})();
 </script>
 </body>
 </html>
