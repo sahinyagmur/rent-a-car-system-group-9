@@ -41,6 +41,20 @@ sudo bash deploy/setup-server.sh      # pulls, rebuilds, restarts; data is kept
 
 Useful commands: `sudo docker compose ps`, `sudo docker compose logs -f web`, reset the database to the sample data: `sudo docker compose down -v && sudo docker compose up -d`.
 
+## Accounts and passwords
+
+- `.env` holds the **database password** and **SECRET_KEY** (random, created by the script). The app and the database both read the same file, so you never type them. Don't delete `.env` while keeping the database: PostgreSQL keeps the password it was created with. If `.env` is lost, reset with `sudo docker compose down -v` (deletes the data) and run the script again.
+- **Site accounts** (admin/customers) are in the database. Change them on the server — the command asks for the password, it never ends up in a file:
+
+  ```bash
+  sudo docker compose exec web python manage.py list-users
+  sudo docker compose exec web python manage.py set-password admin
+  sudo docker compose exec web python manage.py rename-user admin <new_name>
+  sudo docker compose exec web python manage.py create-admin <username>
+  ```
+
+  The graders need a working test login for each role (guideline: README). If you change the `admin` password on the live site, put the new test credentials in the README you submit, or create a separate personal admin with `create-admin` and keep `admin` / `Admin123!` as the test account.
+
 ## 5. Domain (bonus, optional)
 
 1. Buy a cheap domain (≤ 50 TL) from any registrar.
