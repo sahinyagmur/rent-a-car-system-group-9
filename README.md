@@ -53,6 +53,18 @@ docker compose exec db psql -U postgres -d rentacar_db -f /queries/queries.sql
 
 Copy `.env.example` to `.env` and change the values (database password, `SECRET_KEY`, port). Without `.env`, development defaults are used — **always set real values on the server**. `.env` is git-ignored.
 
+## Deployment (Linux server)
+
+On a fresh Ubuntu 22.04/24.04 VM with ports 22 (SSH) and 80 (HTTP) open:
+
+```
+git clone https://github.com/sahinyagmur/rent-a-car-system-group-9.git
+cd rent-a-car-system-group-9
+bash deploy/setup.sh
+```
+
+The script installs Docker, creates `.env` with a random database password and `SECRET_KEY`, and starts the app on port 80. Open `http://<server public IP>/`. To update after new commits, run `bash deploy/setup.sh` again (it keeps `.env` and the database).
+
 ## Frontend preview without Docker
 
 ```
