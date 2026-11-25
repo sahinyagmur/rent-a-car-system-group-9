@@ -12,3 +12,9 @@
 www.{$DOMAIN} {
 	redir https://{$DOMAIN}{uri} permanent
 }
+
+# Anything else on plain http (e.g. typing the server's IP address) -> the domain.
+# Certificates can't be issued for a bare IP, so the IP can't serve https itself.
+http:// {
+	redir https://{$DOMAIN}{uri}
+}
