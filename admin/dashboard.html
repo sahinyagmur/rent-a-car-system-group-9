@@ -1,38 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rent a Car Dashboard</title>
-<style>
-* { box-sizing: border-box; }
-body { margin: 0; font-family: Arial, sans-serif; background-color: #eef2f7; color: #1e293b; }
-header { background-color: #1e40af; color: white; padding: 25px 35px; }
-header h1 { margin: 0 0 8px; }
-header p { margin: 0; color: #dbeafe; }
-.container { max-width: 1100px; margin: 40px auto; padding: 0 20px; }
-.section-title { margin-bottom: 25px; }
-.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 20px; }
-.card { background-color: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.07); }
-.card h3 { margin-top: 0; color: #1e40af; }
-.card p { color: #64748b; line-height: 1.6; }
-.card a { display: inline-block; margin-top: 12px; background-color: #2563eb; color: white; padding: 11px 18px; border-radius: 6px; text-decoration: none; }
-.card a:hover { background-color: #1d4ed8; }
-.back-link { display: inline-block; margin-top: 30px; color: #1e40af; text-decoration: none; }
-.back-link:hover { text-decoration: underline; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Admin — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="../css/style.css">
 </head>
-<body>
-<header><h1>Rent a Car Dashboard</h1><p>Welcome to the Rent a Car Management System.</p></header>
-<main class="container">
-<h2 class="section-title">Management Menu</h2>
-<div class="cards">
-<div class="card"><h3>Cars</h3><p>View and manage vehicles, including car information and availability status.</p><a href="cars.html">Manage Cars</a></div>
-<div class="card"><h3>Customers</h3><p>View customer information, add new customers and update existing records.</p><a href="customers.html">Manage Customers</a></div>
-<div class="card"><h3>Rentals</h3><p>Manage rental records, rental dates and vehicle assignments.</p><a href="rentals.html">Manage Rentals</a></div>
-<div class="card"><h3>Payments</h3><p>Manage payment amounts, methods and payment status for rentals.</p><a href="payments.html">Manage Payments</a></div>
-</div>
-<a class="back-link" href="index.html">Back to Login</a>
-</main>
+<body data-page="admin">
+<main class="container"><div id="admin"></div></main>
+
+<script src="../js/api.js"></script>
+<script src="../js/app.js"></script>
+<script src="../js/admin.js"></script>
+<script>
+(async function () {
+  if (!Auth.require("admin")) return;
+  const root = document.getElementById("admin");
+  const nav = Admin.adminNav("dashboard");
+  root.innerHTML = nav + `<div class="toolbar"><h1>Dashboard</h1></div><p class="muted">Loading…</p>`;
+  let x;
+  try { x = await Admin.loadRefs(["cars", "customers", "rentals", "payments"]); }
+  catch (e) { root.innerHTML = nav + `<div class="empty"><h3>Could not load data</h3><p>${UI.esc(e.message)}</p></div>`; return; }
+
+  const t = API.today();
+  const paid = x.payments.filter(p => p.payment_status === "Paid");
+  const paidFor = id => paid.filter(p => p.rental_id === id).reduce((s, p) => s + Number(p.amount), 0);
+  const count = s => x.rentals.filter(r => r.status === s).length;
+  const thisMonth = paid.filter(p => p.payment_date.startsWith(t.slice(0, 7))).reduce((s, p) => s + Number(p.amount), 0);
+  const outstanding = x.rentals.filter(r => r.status !== "Cancelled")
+    .reduce((s, r) => s + Math.max(0, r.total_price - paidFor(r.id)), 0);
+
+  // Same idea as the report's GROUP BY query: paid revenue per month
+  const byMonth = {};
+  paid.forEach(p => { const m = p.payment_date.slice(0, 7); byMonth[m] = (byMonth[m] || 0) + Number(p.amount); });
+  const months = Object.keys(byMonth).sort().reverse();
+  const top = Math.max(1, ...Object.values(byMonth));
+
+  const upcoming = x.rentals
+    .filter(r => (r.status === "Pending" || r.status === "Active") && r.end_date >= t)
+    .sort((a, b) => a.start_date.localeCompare(b.start_date)).slice(0, 6);
+  const customerName = id => (x.customersById.get(id) || {}).name || "#" + id;
+
+  root.innerHTML = nav + `
+    <div class="toolbar"><h1>Dashboard</h1><span class="muted small">${UI.date(t)}</span></div>
+    <div class="stats">
+      <div class="card stat"><span>Cars</span><b>${x.cars.length}</b><small>${x.cars.filter(c => c.status === "Available").length} available · ${x.cars.filter(c => c.status === "Maintenance").length} in maintenance</small></div>
+      <div class="card stat"><span>Active rentals</span><b>${count("Active")}</b><small>${count("Pending")} pending</small></div>
+      <div class="card stat"><span>Revenue this month</span><b>${UI.money(thisMonth)}</b><small>paid payments</small></div>
+      <div class="card stat"><span>Outstanding</span><b>${UI.money(outstanding)}</b><small>unpaid balance on rentals</small></div>
+      <div class="card stat"><span>Customers</span><b>${x.customers.length}</b><small>${x.customers.filter(c => c.user_id).length} with online account</small></div>
+    </div>
+    <div class="two-col">
+      <div class="card card-pad">
+        <h3>Upcoming &amp; active rentals</h3>
+        ${upcoming.length ? `<div class="table-wrap"><table class="table"><tbody>${upcoming.map(r => `
+          <tr>
+            <td><strong>${UI.esc(customerName(r.customer_id))}</strong><div class="small muted">${UI.esc(Admin.carName(x.carsById.get(r.car_id)))}</div></td>
+            <td class="small">${UI.date(r.start_date)} – ${UI.date(r.end_date)}</td>
+            <td>${UI.badge(r.status)}</td>
+          </tr>`).join("")}</tbody></table></div>`
+          : `<p class="muted">No upcoming rentals.</p>`}
+        <a class="btn btn-ghost btn-sm" href="rentals.html" style="margin-top:12px">All rentals →</a>
+      </div>
+      <div class="card card-pad">
+        <h3>Monthly revenue</h3>
+        ${months.length ? `<div class="table-wrap"><table class="table"><tbody>${months.map(m => `
+          <tr>
+            <td style="width:90px"><strong>${m}</strong></td>
+            <td><div class="bar"><i style="width:${(byMonth[m] / top * 100).toFixed(1)}%"></i></div></td>
+            <td style="text-align:right">${UI.money(byMonth[m])}</td>
+          </tr>`).join("")}</tbody></table></div>`
+          : `<p class="muted">No paid payments yet.</p>`}
+        <a class="btn btn-ghost btn-sm" href="payments.html" style="margin-top:12px">All payments →</a>
+      </div>
+    </div>`;
+})();
+</script>
 </body>
 </html>

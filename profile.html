@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="profile">
+<main class="container" style="max-width:640px">
+  <div class="page-head">
+    <span class="eyebrow">Your account</span>
+    <h1>Profile</h1>
+  </div>
+  <div class="card card-pad">
+    <div id="error" class="form-error hidden" role="alert"></div>
+    <form id="profileForm" novalidate>
+      <div class="field">
+        <label for="name">Full name</label>
+        <input class="input" id="name" maxlength="150" required>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label for="email">E-mail</label>
+          <input class="input" id="email" type="email" maxlength="255" required>
+        </div>
+        <div class="field">
+          <label for="phone">Phone</label>
+          <input class="input" id="phone" type="tel" maxlength="30" required>
+        </div>
+      </div>
+      <div class="field">
+        <label for="license">Driver license number</label>
+        <input class="input" id="license" disabled>
+        <span class="hint">Contact the office to change your license number.</span>
+      </div>
+      <div class="field">
+        <label for="username">Username</label>
+        <input class="input" id="username" disabled>
+      </div>
+      <button class="btn btn-accent" id="saveBtn" type="submit">Save changes</button>
+    </form>
+  </div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  const user = Auth.require("customer");
+  if (!user) return;
+  const $ = id => document.getElementById(id);
+  const showError = msg => { $("error").textContent = msg; $("error").classList.remove("hidden"); };
+
+  let customer;
+  try { customer = await API.get("customers", user.customer_id); }
+  catch (e) { showError("Could not load your profile: " + e.message); $("saveBtn").disabled = true; return; }
+
+  $("name").value = customer.name;
+  $("email").value = customer.email;
+  $("phone").value = customer.phone;
+  $("license").value = customer.driver_license_no;
+  $("username").value = user.username;
+
+  $("profileForm").addEventListener("submit", async ev => {
+    ev.preventDefault();
+    $("error").classList.add("hidden");
+    const data = {
+      name: $("name").value.trim(),
+      email: $("email").value.trim().toLowerCase(),
+      phone: $("phone").value.trim()
+    };
+    if (!data.name) return showError("Enter your full name.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.email)) return showError("Enter a valid e-mail address.");
+    if (!/^[0-9 +()-]{10,30}$/.test(data.phone)) return showError("Enter a valid phone number.");
+    $("saveBtn").disabled = true;
+    try {
+      await API.update("customers", user.customer_id, data);
+      Auth.patch({ name: data.name });
+      UI.toast("Profile saved.", "ok");
+      setTimeout(() => location.reload(), 600);
+    } catch (e) { showError(e.message); }
+    $("saveBtn").disabled = false;
+  });
+})();
+</script>
+</body>
+</html>

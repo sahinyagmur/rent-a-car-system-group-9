@@ -22,6 +22,11 @@
       try { return JSON.parse(localStorage.getItem(SESSION_KEY)); } catch (e) { return null; }
     },
     isAdmin() { const u = Auth.user(); return !!u && u.role === "admin"; },
+    // Update cached session fields (e.g. name after a profile edit)
+    patch(fields) {
+      const u = Auth.user();
+      if (u) localStorage.setItem(SESSION_KEY, JSON.stringify({ ...u, ...fields }));
+    },
     async login(username, password) {
       const user = await API.login(username, password);
       localStorage.setItem(SESSION_KEY, JSON.stringify(user));

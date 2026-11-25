@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm booking — G9 Rent a Car</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-page="cars">
+<main class="container" style="max-width:980px">
+  <div class="page-head">
+    <span class="eyebrow">Step 2 of 2</span>
+    <h1>Confirm your booking</h1>
+  </div>
+  <div id="content"><p class="muted">Loading…</p></div>
+</main>
+
+<script src="js/api.js"></script>
+<script src="js/app.js"></script>
+<script>
+(async function () {
+  const user = Auth.require("customer");
+  if (!user) return;
+  const box = document.getElementById("content");
+  const carId = Number(UI.qs("car"));
+  const start = UI.qs("start"), end = UI.qs("end");
+
+  const fail = (title, text) => {
+    box.innerHTML = `<div class="empty"><h3>${UI.esc(title)}</h3><p>${UI.esc(text)}</p><a class="btn" href="cars.html">Browse cars</a></div>`;
+  };
+  if (!carId || !start || !end || end < start) return fail("Missing booking details", "Pick a car and valid dates first.");
+  if (start < API.today()) return fail("Pick-up date is in the past", "Choose new dates on the car page.");
+
+  let car, customer;
+  try {
+    car = await API.get("cars", carId);
+    customer = user.customer_id ? await API.get("customers", user.customer_id) : null;
+  } catch (e) {
+    return fail("Car not found", e.message);
+  }
+  if (!customer) return fail("No customer profile", "This account has no customer record. Contact the office.");
+
+  const days = API.dayCount(start, end);
+  const total = days * car.price_per_day;
+
+  box.innerHTML = `
+    <div class="detail">
+      <div class="card card-pad">
+        <div style="display:flex;gap:20px;align-items:center;flex-wrap:wrap">
+          <div style="width:180px;background:var(--surface-2);border-radius:var(--r);padding:16px">${UI.carArt(car)}</div>
+          <div>
+            <h2 style="margin:0">${UI.esc(car.brand)} ${UI.esc(car.model)}</h2>
+            <p class="muted" style="margin:4px 0 0">${car.year} · ${UI.esc(car.license_plate)}</p>
+          </div>
+        </div>
+        <div class="spec-list">
+          <div class="spec"><span>Pick-up</span><b>${UI.date(start)}</b></div>
+          <div class="spec"><span>Return</span><b>${UI.date(end)}</b></div>
+        </div>
+        <a class="small muted" href="car-detail.html?id=${car.id}&start=${start}&end=${end}">← Change dates</a>
+
+        <h3 style="margin-top:28px">Driver</h3>
+        <div class="spec-list" style="margin-top:12px">
+          <div class="spec"><span>Name</span><b>${UI.esc(customer.name)}</b></div>
+          <div class="spec"><span>Driver license</span><b>${UI.esc(customer.driver_license_no)}</b></div>
+          <div class="spec"><span>E-mail</span><b>${UI.esc(customer.email)}</b></div>
+          <div class="spec"><span>Phone</span><b>${UI.esc(customer.phone)}</b></div>
+        </div>
+        <a class="small muted" href="profile.html">Wrong details? Update your profile</a>
+      </div>
+
+      <aside class="card card-pad booking-box">
+        <h3>Price summary</h3>
+        <div class="summary-row"><span>${UI.money(car.price_per_day)} × ${days} day${days > 1 ? "s" : ""}</span><span>${UI.money(total)}</span></div>
+        <div class="summary-row total"><span>Total</span><span>${UI.money(total)}</span></div>
+        <p class="small muted">Payment is taken at the counter on pick-up (cash or card). Your booking stays <b>Pending</b> until then and can be cancelled free of charge.</p>
+        <div id="error" class="form-error hidden" role="alert"></div>
+        <label class="small" style="display:flex;gap:10px;align-items:flex-start;margin:14px 0">
+          <input type="checkbox" id="agree" style="margin-top:3px;accent-color:var(--accent)">
+          <span>I have a valid driver license and will bring it on pick-up.</span>
+        </label>
+        <button class="btn btn-accent btn-lg btn-block" id="confirmBtn" disabled>Confirm booking</button>
+      </aside>
+    </div>`;
+
+  const $ = id => document.getElementById(id);
+  $("agree").addEventListener("change", () => { $("confirmBtn").disabled = !$("agree").checked; });
+  $("confirmBtn").addEventListener("click", async () => {
+    $("confirmBtn").disabled = true;
+    $("error").classList.add("hidden");
+    try {
+      // total_price / status are set by the server (README: section 8.1)
+      const rental = await API.create("rentals", {
+        customer_id: user.customer_id, car_id: car.id, start_date: start, end_date: end
+      });
+      location.href = `my-rentals.html?new=${rental.id}`;
+    } catch (e) {
+      $("error").textContent = e.message;
+      $("error").classList.remove("hidden");
+      $("confirmBtn").disabled = false;
+    }
+  });
+})();
+</script>
+</body>
+</html>

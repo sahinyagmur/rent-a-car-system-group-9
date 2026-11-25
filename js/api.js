@@ -101,6 +101,19 @@
     if (clash) throw new ApiError("This car is already booked for those dates.", 409);
   }
 
+  // Mirror UNIQUE constraints from schema.sql
+  function checkUnique(db, res, row, excludeId) {
+    const taken = (key, msg) => {
+      if (row[key] != null && db[res].some(x => x.id !== excludeId && x[key] === row[key])) throw new ApiError(msg, 409);
+    };
+    if (res === "cars") taken("license_plate", "License plate already exists.");
+    if (res === "customers") {
+      taken("email", "E-mail already registered.");
+      taken("driver_license_no", "Driver license number already registered.");
+      taken("user_id", "This user account is already linked to a customer.");
+    }
+  }
+
   const mock = {
     async list(res) { return delay(load()[res]); },
 
@@ -113,15 +126,9 @@
     async create(res, data) {
       const db = load();
       const row = { ...data, id: nextId(db[res]) };
-      if (res === "cars") {
-        row.status = row.status || "Available";
-        if (db.cars.some(c => c.license_plate === row.license_plate)) throw new ApiError("License plate already exists.", 409);
-      }
-      if (res === "customers") {
-        if (db.customers.some(c => c.email === row.email)) throw new ApiError("E-mail already registered.", 409);
-        if (db.customers.some(c => c.driver_license_no === row.driver_license_no)) throw new ApiError("Driver license number already registered.", 409);
-        row.user_id = row.user_id ?? null;
-      }
+      checkUnique(db, res, row);
+      if (res === "cars") row.status = row.status || "Available";
+      if (res === "customers") row.user_id = row.user_id ?? null;
       if (res === "rentals") {
         row.status = row.status || "Pending";
         checkRental(db, row);
@@ -144,7 +151,16 @@
       const row = db[res].find(r => r.id === Number(id));
       if (!row) throw new ApiError("Not found.", 404);
       const next = { ...row, ...data, id: row.id };
-      if (res === "rentals") checkRental(db, next, row.id);
+      checkUnique(db, res, next, row.id);
+      if (res === "rentals") {
+        checkRental(db, next, row.id);
+        const moved = next.car_id !== row.car_id || next.start_date !== row.start_date || next.end_date !== row.end_date;
+        if (moved && data.total_price == null) {
+          const car = db.cars.find(c => c.id === next.car_id);
+          next.total_price = dayCount(next.start_date, next.end_date) * car.price_per_day;
+        }
+      }
+      if (res === "payments" && !db.rentals.some(r => r.id === next.rental_id)) throw new ApiError("Rental not found.", 404);
       Object.assign(row, next);
       save(db);
       return delay(row);
