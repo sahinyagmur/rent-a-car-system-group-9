@@ -152,7 +152,19 @@ Rewrite `seed.sql` for the schema above. Requirements:
 - Serve the repository root (the folder that contains `index.html`, `css/`, `js/`, `admin/`) as static files.
 - `GET /` must return `index.html` (it currently returns a JSON health message — move that to `GET /api/health`).
 - Any path under `/api/` is the API; everything else is a static file.
-- Example: `app = Flask(__name__, static_folder=REPO_ROOT, static_url_path="")` and a `@app.get("/")` that returns `send_from_directory(REPO_ROOT, "index.html")`.
+- Routing rules for non-API paths (copy them from `tools/dev-server.js`, which already implements them for frontend previews):
+
+  | URL | Response |
+  |---|---|
+  | `/` | `index.html` |
+  | `/admin` | 301 redirect to `/admin/` |
+  | `/admin/` | `admin/index.html` (it forwards to `admin/dashboard.html`) |
+  | `/cars` (no extension) | `cars.html` if it exists |
+  | `/backend/...`, `/tools/...`, any path with a part starting with `.` (e.g. `/.git`, `/.env`) | 404 — **never serve backend code or secrets** |
+  | anything else that doesn't exist | `404.html` with HTTP status **404** |
+  | unknown `/api/...` path | JSON `{"status":"error","error":"Not found."}` with 404 (not the HTML page) |
+
+  Simplest safe way: don't use `static_folder` on the repo root; write one catch-all route `@app.get("/<path:p>")` that applies the table above with `send_from_directory`, registered **after** all `/api` routes.
 
 ---
 
