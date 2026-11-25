@@ -3,15 +3,20 @@
 
    MODE = "mock": data lives in this browser's localStorage, seeded with
                   the same rows/field names as backend/schema.sql + seed.sql.
-   MODE = "live": the same calls go to the Flask API (backend/README_BACKEND.md).
+   MODE = "live": the same calls go to the Flask API (backend/app.py).
 
    Pages never call fetch() directly; they call API.list("cars") etc.
-   When the backend is ready, flip MODE to "live" — pages don't change.
+   The mode is picked automatically (see MODE below); pages never change.
    ========================================================= */
 (function () {
-  const MODE = "mock";          // "mock" | "live"
+  // Automatic: the preview server (tools/dev-server.js, port 5500) and file:// use mock data;
+  // Flask / Docker (any other origin) uses the real API. Force one for testing with
+  // localStorage.setItem("g9rac_mode", "mock" | "live").
+  const FORCED = (() => { try { return localStorage.getItem("g9rac_mode"); } catch (e) { return null; } })();
+  const MODE = FORCED === "mock" || FORCED === "live" ? FORCED
+    : (location.protocol === "file:" || location.port === "5500" ? "mock" : "live");
   const BASE = "/api";          // Flask serves pages + API on the same origin
-  const DB_KEY = "g9rac_db_v1";
+  const DB_KEY = "g9rac_db_v2";
 
   const RESOURCES = ["cars", "customers", "rentals", "payments"];
   const SINGULAR = { cars: "car", customers: "customer", rentals: "rental", payments: "payment" };
@@ -61,15 +66,20 @@
       { id: 2, user_id: 3, name: "Demo Customer Two", email: "demo2@example.com", phone: "05000000002", driver_license_no: "DL-100002" },
       { id: 3, user_id: null, name: "Demo Customer Three", email: "demo3@example.com", phone: "05000000003", driver_license_no: "DL-100003" }
     ],
+    // Same rows as backend/seed.sql
     rentals: [
-      { id: 1, customer_id: 1, car_id: 1, start_date: "2026-12-01", end_date: "2026-12-03", total_price: 15000, status: "Active" },
-      { id: 2, customer_id: 2, car_id: 2, start_date: "2026-12-05", end_date: "2026-12-06", total_price: 13000, status: "Pending" },
-      { id: 3, customer_id: 3, car_id: 1, start_date: "2026-12-10", end_date: "2026-12-12", total_price: 15000, status: "Pending" }
+      { id: 1, customer_id: 3, car_id: 3, start_date: "2026-10-05", end_date: "2026-10-08", total_price: 10000, status: "Completed" },
+      { id: 2, customer_id: 1, car_id: 5, start_date: "2026-11-10", end_date: "2026-11-12", total_price: 5700, status: "Completed" },
+      { id: 3, customer_id: 2, car_id: 9, start_date: "2026-11-24", end_date: "2026-11-28", total_price: 19500, status: "Active" },
+      { id: 4, customer_id: 1, car_id: 1, start_date: "2026-12-01", end_date: "2026-12-03", total_price: 15000, status: "Pending" },
+      { id: 5, customer_id: 2, car_id: 2, start_date: "2026-12-05", end_date: "2026-12-06", total_price: 13000, status: "Pending" },
+      { id: 6, customer_id: 3, car_id: 6, start_date: "2026-11-15", end_date: "2026-11-16", total_price: 8400, status: "Cancelled" }
     ],
     payments: [
-      { id: 1, rental_id: 3, payment_date: "2026-11-21", amount: 15000, payment_method: "Card", payment_status: "Paid" },
-      { id: 2, rental_id: 2, payment_date: "2026-11-22", amount: 13000, payment_method: "Cash", payment_status: "Pending" },
-      { id: 3, rental_id: 1, payment_date: "2026-10-28", amount: 10000, payment_method: "Card", payment_status: "Paid" }
+      { id: 1, rental_id: 1, payment_date: "2026-10-08", amount: 10000, payment_method: "Cash", payment_status: "Paid" },
+      { id: 2, rental_id: 2, payment_date: "2026-11-12", amount: 5700, payment_method: "Card", payment_status: "Paid" },
+      { id: 3, rental_id: 3, payment_date: "2026-11-24", amount: 10000, payment_method: "Card", payment_status: "Paid" },
+      { id: 4, rental_id: 4, payment_date: "2026-11-25", amount: 5000, payment_method: "Card", payment_status: "Pending" }
     ]
   };
 
@@ -99,6 +109,18 @@
     const clash = db.rentals.some(x => x.id !== excludeId && x.car_id === r.car_id &&
       ACTIVE_RENTAL.includes(x.status) && overlaps(r.start_date, r.end_date, x.start_date, x.end_date));
     if (clash) throw new ApiError("This car is already booked for those dates.", 409);
+  }
+
+  // Same rules as backend/app.py
+  const STATUS_FLOW = { Pending: ["Active", "Cancelled"], Active: ["Completed"], Completed: [], Cancelled: [] };
+
+  function checkPayment(db, p, excludeId) {
+    const rental = db.rentals.find(r => r.id === p.rental_id);
+    if (!rental) throw new ApiError("Rental not found.", 404);
+    if (p.payment_status !== "Paid") return;
+    const paid = db.payments.filter(x => x.id !== excludeId && x.rental_id === p.rental_id && x.payment_status === "Paid")
+      .reduce((s, x) => s + Number(x.amount), 0);
+    if (paid + Number(p.amount) > rental.total_price) throw new ApiError("Payment exceeds the remaining balance of this rental.");
   }
 
   // Mirror UNIQUE constraints from schema.sql
@@ -138,7 +160,7 @@
         }
       }
       if (res === "payments") {
-        if (!db.rentals.some(r => r.id === row.rental_id)) throw new ApiError("Rental not found.", 404);
+        checkPayment(db, row);
         row.payment_date = row.payment_date || today();
       }
       db[res].push(row);
@@ -152,6 +174,10 @@
       if (!row) throw new ApiError("Not found.", 404);
       const next = { ...row, ...data, id: row.id };
       checkUnique(db, res, next, row.id);
+      if (res === "rentals" && next.status !== row.status && !(STATUS_FLOW[row.status] || []).includes(next.status)) {
+        throw new ApiError(`Status can't change from ${row.status} to ${next.status}.`);
+      }
+      if (res === "payments") checkPayment(db, next, row.id);
       if (res === "rentals") {
         checkRental(db, next, row.id);
         const moved = next.car_id !== row.car_id || next.start_date !== row.start_date || next.end_date !== row.end_date;
@@ -248,8 +274,14 @@
     async bookedRanges(carId) { return (await http("GET", `/cars/${carId}/booked`)).ranges; },
     async login(username, password) { return (await http("POST", "/auth/login", { username, password })).user; },
     async register(data) { return (await http("POST", "/auth/register", data)).user; },
-    async logout() { return http("POST", "/auth/logout"); }
+    async logout() { return http("POST", "/auth/logout"); },
+    // Server-side session check; null when not logged in
+    async me() {
+      try { return (await http("GET", "/auth/me")).user; }
+      catch (e) { if (e.status === 401) return null; throw e; }
+    }
   };
+  mock.me = async () => undefined;   // mock keeps the session only in the browser
 
   const impl = MODE === "live" ? live : mock;
 
@@ -269,6 +301,7 @@
     login: impl.login,
     register: impl.register,
     logout: impl.logout,
+    me: impl.me,
     resetMock() { localStorage.removeItem(DB_KEY); }
   };
 })();

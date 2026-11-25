@@ -1,73 +1,77 @@
-# Rent a Car — Backend integration (22 Nov 2026)
+# Backend (Flask + PostgreSQL)
 
-## Contents
-- `app.py`: Flask API for Cars, Customers, Rentals, Payments.
-- `schema.sql`: initial schema for a NEW empty database.
-- `migrate_existing.sql`: migration from the previously shared `cars(..., available)` database; **backup first**.
-- `seed.sql`: 3 demo rows per table for a NEW empty database only.
-- `.env.example`: copy to `.env` in the `backend/` directory and set your local PostgreSQL password. **Never commit `.env`.**
+`app.py` serves the JSON API under `/api` and the frontend files from the repository root, from one origin.
 
-## Start
+## Run
+
+With Docker (recommended), from the repository root:
+
+```
+docker compose up --build        # http://localhost:5000
+```
+
+Without Docker (needs a local PostgreSQL with `schema.sql` + `seed.sql` loaded):
+
 ```powershell
 cd backend
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env
-# edit .env to set DB_PASSWORD
-python app.py
+copy .env.example .env           # set DB_PASSWORD and SECRET_KEY
+python app.py                    # http://127.0.0.1:5000
 ```
-For an existing DB, first back it up and execute `migrate_existing.sql` using DBeaver/psql, **not** `schema.sql` or `seed.sql`. For a new DB run `schema.sql` then `seed.sql`. If Person 2 has already created tables, reconcile schema before running either SQL script.
 
-## Endpoint contract
-All four resources: `cars`, `customers`, `rentals`, `payments`.
+## Files
 
-| HTTP method | URL | Response |
+| File | Purpose |
+|---|---|
+| `app.py` | API, authentication, business rules, static file serving |
+| `schema.sql` | Tables and constraints (new empty database only) |
+| `seed.sql` | Sample data and test accounts |
+| `queries.sql` | Report queries for Chapter 5 |
+| `Dockerfile` | Web image (gunicorn) |
+| `FRONTEND_INTEGRATION.md` | The contract between frontend and backend (detailed spec) |
+
+## Authentication
+
+Session cookie (signed with `SECRET_KEY`, HttpOnly, SameSite=Lax). Passwords: werkzeug scrypt hashes.
+
+| Endpoint | Body | Result |
 |---|---|---|
-| GET | `/api/<resource>` | `{ "status":"success", "<resource>":[...] }` |
-| GET | `/api/<resource>/<id>` | `{ "status":"success", "car/customer/rental/payment": {...} }` |
-| POST | `/api/<resource>` | `{ "status":"success", "record": {...} }` (201) |
-| PUT/PATCH | `/api/<resource>/<id>` | `{ "status":"success", "record": {...} }` |
-| DELETE | `/api/<resource>/<id>` | `{ "status":"success", "deleted_id": 1 }` |
+| `POST /api/auth/login` | `username`, `password` | `user` + session |
+| `POST /api/auth/register` | `name`, `email`, `phone`, `driver_license_no`, `username`, `password` | creates user (role customer) + customer in one transaction |
+| `POST /api/auth/logout` | – | clears session |
+| `GET /api/auth/me` | – | current `user` or 401 |
 
-PUT is implemented as **partial update**, same as PATCH. `id` is database-generated and is not accepted in POST/PUT payloads.
+`user` = `{id, username, role, customer_id, name}`; role is `admin` or `customer`.
 
-### Request JSON examples
-**POST /api/cars**
-```json
-{"brand":"BMW","model":"320i","license_plate":"06 ABC 123","year":2023,"price_per_day":5000,"status":"Available"}
-```
-Allowed car statuses: `Available`, `Rented`, `Maintenance`. If omitted in POST, status defaults to `Available`.
+## Resources
 
-**POST /api/customers**
-```json
-{"name":"Ada Example","email":"ada@example.com","phone":"05000000000"}
-```
+Responses: list `{"status":"success","cars":[...]}`, one `{"status":"success","car":{...}}`, create/update `{"status":"success","record":{...}}`, delete `{"status":"success","deleted_id":1}`, error `{"status":"error","error":"Message."}`. Updates use `PATCH` (partial; `PUT` behaves the same).
 
-**POST /api/rentals**
-```json
-{"customer_id":1,"car_id":1,"start_date":"2026-12-01","end_date":"2026-12-03"}
-```
-Dates are inclusive. Existing customer and car are required; Maintenance cars and overlapping rental date ranges are rejected. `Rented` status is informational and does not by itself prevent a booking on nonoverlapping dates. The car status is **not automatically changed** when a rental is created/deleted; this must be agreed with Person 2.
+| Resource | Guest | Customer | Admin |
+|---|---|---|---|
+| `cars` | read | read | full CRUD |
+| `customers` | – | read/update own (name, email, phone) | full CRUD |
+| `rentals` | – | read own, create for self, cancel own Pending | full CRUD |
+| `payments` | – | read own | full CRUD |
 
-**POST /api/payments**
-```json
-{"rental_id":1,"amount":15000,"payment_method":"Card","payment_status":"Paid"}
-```
-Allowed methods: `Cash`, `Card`; payment statuses: `Paid`, `Pending`. A rental must exist before creating its payment.
+Extra endpoints:
 
-### Frontend mapping
-- Cars JS `licensePlate` -> API `license_plate`; `pricePerDay` -> `price_per_day`.
-- Customers JS `name` -> API `name` (form ID `fullName` stays unchanged).
-- Rentals JS `customerId` -> `customer_id`; `carId` -> `car_id`; `startDate` -> `start_date`; `endDate` -> `end_date`.
-- Payments JS `rentalId` -> `rental_id`; `method` -> `payment_method`; `status` -> `payment_status`.
-- GET response is an object containing an array (`response.cars`, etc.), **not a bare array**.
-- Frontend HTML in the shared repository is still demo-only and must be updated to use `fetch` to these URLs. Serve pages from the same Flask origin or configure CORS appropriately; opening HTML via `file://` can cause origin/CORS issues.
+- `GET /api/cars/available?start=YYYY-MM-DD&end=YYYY-MM-DD` — cars free for the dates (not in Maintenance, no overlapping Pending/Active rental)
+- `GET /api/cars/<id>/booked` — date ranges of Pending/Active rentals (dates only)
+- `GET /api/reports/rental-details | monthly-revenue | above-average-cars` — report queries (admin)
+- `GET /api/health` — API + database check
 
-### Important limits
-- This is a **four-entity provisional schema**. The professor requires 5–10 entities: reconcile with Person 2's ER/EER before final submission.
-- `migrate_existing.sql` keeps legacy `available` for compatibility and sets its default to TRUE. Legacy `available` and new `status` can diverge; use `status` as the API source of truth until the final ER/EER migration removes the old column.
-- The SQL migration assumes the old cars table exactly matches the shared `app.py`. It does not migrate an unrelated Person 2 schema.
-- No login/authentication is implemented; index.html remains demo.
-- Do not deploy this development API publicly without authentication, rate limits, CORS/origin controls, and production configuration.
-- Syntax was checked, but a live PostgreSQL integration test has **not** been run here.
+## Business rules
+
+- `total_price` = inclusive days × `price_per_day`, calculated by the server (customers can't send it; admins may override). Recalculated when dates or car change.
+- Pending/Active rentals of the same car can't overlap; Maintenance cars can't be booked. The car row is locked during the check so two bookings can't race.
+- Rental status flow: `Pending → Active | Cancelled`, `Active → Completed`.
+- A payment can't make the paid total exceed the rental's `total_price`. Rentals include `paid_amount` and `remaining`.
+- Deleting a car/customer/rental that is still referenced returns 409 (foreign keys are `ON DELETE RESTRICT`).
+- `users` and `roles` are not exposed through the API; password hashes are never returned.
+
+## Configuration (environment variables)
+
+`DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `SECRET_KEY`, `SESSION_COOKIE_SECURE` (true behind HTTPS). Docker Compose reads them from `.env` in the repository root.

@@ -1,5 +1,7 @@
 # Backend tasks for the new frontend
 
+> **Status (25 Nov 2026): implemented.** `app.py`, `schema.sql`, `seed.sql`, `queries.sql`, `Dockerfile` and `docker-compose.yml` follow this document, and `js/api.js` switches to live mode automatically when served by Flask. Keep this file as the specification; the short API reference is `README_BACKEND.md`. One deviation: section 12 is no longer manual — `MODE` is chosen automatically (mock on the port-5500 preview server, live everywhere else).
+
 > **TR – Backend sorumlusu için:** Bu dosyayı olduğu gibi kendi yapay zeka asistanına (Claude, ChatGPT, Copilot...) ver ve "bu dokümandaki görevleri `backend/app.py`, `schema.sql`, `seed.sql` üzerinde uygula" de. Doküman, asistanın başka bir bağlam olmadan işi yapabileceği şekilde yazıldı. Bir şey belirsizse ekiple konuşun, tahmin etmeyin.
 
 **Instructions for the AI assistant reading this file:** You are working in the repository `rent-a-car-system-group-9` (CMPE341 Database course project, Group 9). The frontend is plain HTML/CSS/JS in the repository root. The backend is Flask + PostgreSQL in `backend/`. Your job is to change the backend so it matches the contract in this document. The frontend is already finished against this contract and **must not be changed** to fit the backend — change the backend instead. Work through the sections in order and tick the checklist at the end.

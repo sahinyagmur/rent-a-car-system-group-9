@@ -230,6 +230,23 @@
   window.Auth = Auth;
   window.UI = UI;
 
+  // Live mode: the server session is the truth. If it expired (or the database was
+  // reset) while the browser still remembers a user, forget it and reload.
+  if (API.MODE === "live") {
+    API.me().then(user => {
+      const cached = Auth.user();
+      if (user) {
+        if (!cached || cached.id !== user.id || cached.name !== user.name) {
+          localStorage.setItem(SESSION_KEY, JSON.stringify(user));
+          if (!cached || cached.id !== user.id) location.reload();
+        }
+      } else if (cached) {
+        localStorage.removeItem(SESSION_KEY);
+        location.reload();
+      }
+    }).catch(() => { /* network/database errors are shown by the page itself */ });
+  }
+
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => { renderHeader(); renderFooter(); });
   } else { renderHeader(); renderFooter(); }
