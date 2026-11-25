@@ -59,9 +59,17 @@ Useful commands: `sudo docker compose ps`, `sudo docker compose logs -f web`, re
 
 1. Buy a cheap domain (≤ 50 TL) from any registrar.
 2. In the registrar's DNS settings add an **A record**: host `@` (and `www`) → `<PUBLIC_IP>`.
-3. After a few minutes `http://yourdomain` opens the same site. No server change is needed.
+3. After a few minutes `http://yourdomain` opens the same site.
+4. Turn on HTTPS (free Let's Encrypt certificate, `www.` redirects to the bare domain, `http` redirects to `https`). Ports 80 and 443 must be open in the firewall:
 
-Optional HTTPS later: put Caddy in front of the web container; then set `SESSION_COOKIE_SECURE=true` in `.env`.
+   ```bash
+   cd ~/rent-a-car-system-group-9 && git pull
+   sudo bash deploy/setup-server.sh --domain yourdomain.com
+   ```
+
+   This adds `DOMAIN`, `WEB_PORT=127.0.0.1:5000` and `SESSION_COOKIE_SECURE=true` to `.env` and starts the `caddy` service (`deploy/Caddyfile`). Later runs of the script keep HTTPS on.
+
+Live deployment of this project: AWS EC2 t3.micro (eu-north-1), Elastic IP `13.50.166.44`, domain **https://rentcar9.site** (DNS at Hostinger: `A @ → 13.50.166.44`, `CNAME www → rentcar9.site`).
 
 ## Screenshots for the report
 

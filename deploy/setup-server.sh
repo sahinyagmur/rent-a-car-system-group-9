@@ -49,22 +49,42 @@ else
   echo "==> Keeping existing .env"
 fi
 
+# Optional HTTPS:  sudo bash deploy/setup-server.sh --domain example.com
+# (the domain's A record must already point to this server)
+set_env() {  # set_env KEY VALUE  -> replace or append in .env
+  if grep -q "^$1=" .env; then sed -i "s|^$1=.*|$1=$2|" .env; else echo "$1=$2" >> .env; fi
+}
+if [ "${1:-}" = "--domain" ] && [ -n "${2:-}" ]; then
+  echo "==> Enabling HTTPS for $2"
+  set_env DOMAIN "$2"
+  set_env WEB_PORT "127.0.0.1:5000"     # Caddy owns ports 80/443; the app is only reachable through it
+  set_env SESSION_COOKIE_SECURE true
+fi
+
 if [ -d .git ]; then
   echo "==> Pulling latest code"
   sudo -u "${SUDO_USER:-root}" git pull --ff-only || git pull --ff-only
 fi
 
+DOMAIN="$(grep -E '^DOMAIN=' .env | cut -d= -f2- || true)"
+PROFILE=()
+[ -n "$DOMAIN" ] && PROFILE=(--profile https)
+
 echo "==> Building and starting containers"
-docker compose up -d --build
+docker compose "${PROFILE[@]}" up -d --build --remove-orphans
 
 echo "==> Waiting for the app"
 for i in $(seq 1 30); do
-  if curl -fs http://localhost/api/health >/dev/null; then break; fi
+  if docker compose exec -T web python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/api/health')" 2>/dev/null; then break; fi
   sleep 2
 done
-curl -fs http://localhost/api/health && echo
+docker compose exec -T web python -c "import urllib.request; print(urllib.request.urlopen('http://127.0.0.1:5000/api/health').read().decode())"
 
-IP="$(curl -fs https://api.ipify.org || hostname -I | awk '{print $1}')"
 echo
-echo "Done. Open:  http://$IP"
-echo "If it doesn't open, allow inbound TCP port 80 in the cloud firewall (network security group)."
+if [ -n "$DOMAIN" ]; then
+  echo "Done. Open:  https://$DOMAIN   (the certificate may take a minute on the first start)"
+else
+  IP="$(curl -fs https://api.ipify.org || hostname -I | awk '{print $1}')"
+  echo "Done. Open:  http://$IP"
+  echo "If it doesn't open, allow inbound TCP port 80 in the cloud firewall (network security group)."
+fi
