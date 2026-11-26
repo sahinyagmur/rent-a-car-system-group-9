@@ -202,6 +202,11 @@
       const before = db[res].length;
       db[res] = db[res].filter(r => r.id !== id);
       if (db[res].length === before) throw new ApiError("Not found.", 404);
+      // Same as the backend: a deleted customer's login account goes with it
+      if (res === "customers") {
+        const linked = new Set(db.customers.map(c => c.user_id));
+        db.users = db.users.filter(u => u.role !== "customer" || linked.has(u.id));
+      }
       save(db);
       return delay({ deleted_id: id });
     },

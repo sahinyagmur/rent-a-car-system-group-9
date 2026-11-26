@@ -597,13 +597,19 @@ def customer_update(customer_id):
 @app.delete("/api/customers/<int:customer_id>")
 @admin_required
 def customer_delete(customer_id):
+    # The customer and their login account are deleted together, in one transaction,
+    # so no orphan account is left that can log in without a profile. A customer with
+    # rentals can't be deleted (FK RESTRICT); then nothing is deleted.
     with transaction() as cur:
         customer = get_or_404(cur, "customers", customer_id, lock=True)
-        if customer["user_id"] is not None:
-            raise ApiError(
-                "This customer has a login account and cannot be deleted.", 409
-            )
         delete(cur, "customers", customer_id)
+        if customer["user_id"] is not None:
+            cur.execute(
+                """DELETE FROM users
+                   WHERE id = %s
+                     AND role_id = (SELECT id FROM roles WHERE role_name = 'customer')""",
+                (customer["user_id"],),
+            )
     return ok(deleted_id=customer_id)
 
 
