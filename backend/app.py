@@ -598,6 +598,11 @@ def customer_update(customer_id):
 @admin_required
 def customer_delete(customer_id):
     with transaction() as cur:
+        customer = get_or_404(cur, "customers", customer_id, lock=True)
+        if customer["user_id"] is not None:
+            raise ApiError(
+                "This customer has a login account and cannot be deleted.", 409
+            )
         delete(cur, "customers", customer_id)
     return ok(deleted_id=customer_id)
 
