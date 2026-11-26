@@ -4,6 +4,8 @@ CMPE341 Database Design & Management — Rent a Car system, Group 9.
 
 A car rental website: customers browse cars, check availability for their dates, book and track their rentals; the admin manages cars, customers, rentals and payments. PostgreSQL database, Flask backend, plain HTML/CSS/JS frontend.
 
+**Live site: https://rentcar9.site** (the server's IP address http://13.50.166.44 redirects to the domain)
+
 ## Run it (one command)
 
 Requires [Docker Desktop](https://www.docker.com/products/docker-desktop/).
@@ -18,6 +20,8 @@ The first start creates the database tables (`backend/schema.sql`) and loads sam
 
 ## Test accounts
 
+The same accounts work on the live site and on a local `docker compose up`.
+
 | Role | Username | Password | Can do |
 |---|---|---|---|
 | Admin | `admin` | `Admin123!` | Admin panel at `/admin`: insert, update, delete cars, customers, rentals, payments; dashboard and reports |
@@ -25,6 +29,8 @@ The first start creates the database tables (`backend/schema.sql`) and loads sam
 | Customer | `demo2` | `Customer123!` | Same as demo1 |
 
 New customers can also sign up at `/register`. Passwords are stored as scrypt hashes (werkzeug).
+
+The `roles` table has three rows: `admin`, `customer` and `employee`. The `employee` role is reserved for future use (counter staff accounts); no user has it yet and it has no permissions in the app.
 
 ## Pages
 
@@ -64,6 +70,10 @@ sudo bash deploy/setup-server.sh
 ```
 
 The script installs Docker, creates `.env` with a random database password and `SECRET_KEY`, and starts the app on port 80. Open `http://<server public IP>/`. To update after new commits, run `sudo bash deploy/setup-server.sh` again (it keeps `.env` and the database).
+
+HTTPS with a domain (ports 80 and 443 open, the domain's A record pointing to the server): `sudo bash deploy/setup-server.sh --domain yourdomain.com`.
+
+Our live server: AWS EC2 t3.micro (Ubuntu, region eu-north-1), Elastic IP `13.50.166.44`, domain **https://rentcar9.site**. Step-by-step guide: `deploy/DEPLOY.md`.
 
 ## Frontend preview without Docker
 

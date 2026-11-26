@@ -7,7 +7,7 @@
 --   demo2 / Customer123!   -> role customer
 
 -- 1. ROLES
-INSERT INTO roles (role_name) VALUES ('admin'), ('customer');
+INSERT INTO roles (role_name) VALUES ('admin'), ('customer'), ('employee');
 
 -- 2. USERS
 INSERT INTO users (username, password_hash, role_id) VALUES
