@@ -60,10 +60,10 @@ On a fresh Ubuntu 22.04/24.04 VM with ports 22 (SSH) and 80 (HTTP) open:
 ```
 git clone https://github.com/sahinyagmur/rent-a-car-system-group-9.git
 cd rent-a-car-system-group-9
-bash deploy/setup.sh
+sudo bash deploy/setup-server.sh
 ```
 
-The script installs Docker, creates `.env` with a random database password and `SECRET_KEY`, and starts the app on port 80. Open `http://<server public IP>/`. To update after new commits, run `bash deploy/setup.sh` again (it keeps `.env` and the database).
+The script installs Docker, creates `.env` with a random database password and `SECRET_KEY`, and starts the app on port 80. Open `http://<server public IP>/`. To update after new commits, run `sudo bash deploy/setup-server.sh` again (it keeps `.env` and the database).
 
 ## Frontend preview without Docker
 
